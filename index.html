@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Jian's Diary">
+<link rel="manifest" href="manifest.json">
+<title>Jian's Diary</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#ffffff;
+  --bg2:#fafafa;
+  --bg3:#f4f4f4;
+  --border:#e8e8e8;
+  --border2:#d0d0d0;
+  --text:#111;
+  --text2:#555;
+  --text3:#999;
+  --green:#1a6648;
+  --red:#c0392b;
+  --radius:14px;
+  --radius-sm:8px;
+}
+body{background:var(--bg2);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* HEADER */
+header{background:var(--bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.h-inner{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:58px;}
+.logo{font-family:'Playfair Display',serif;font-size:19px;letter-spacing:-.2px;}
+.logo em{font-style:italic;color:var(--text3);}
+.btn-new{background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 16px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s;}
+.btn-new:hover{background:#333;}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px;color:var(--text3);font-size:14px;}
+.spinner{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* CALENDAR */
+.cal-wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px;}
+.month-nav{display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:28px;}
+.nav-btn{background:none;border:1px solid var(--border);border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px;color:var(--text2);display:flex;align-items:center;justify-content:center;transition:border-color .15s;}
+.nav-btn:hover{border-color:var(--border2);}
+.month-title{font-family:'Playfair Display',serif;font-size:32px;letter-spacing:-.5px;display:flex;align-items:baseline;gap:10px;}
+.month-title .yr{font-size:15px;font-weight:300;color:var(--text3);font-family:'DM Sans',sans-serif;}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;}
+.dow{text-align:center;font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;padding:5px 0;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+
+/* DAY CELL */
+.day{aspect-ratio:1;border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:default;transition:background .12s;user-select:none;}
+.day.other-month .day-num{opacity:.25;}
+.day-num{font-size:13px;font-weight:400;color:var(--text2);line-height:1;}
+.day.today .day-num{background:var(--bg3);border-radius:50%;width:27px;height:27px;display:flex;align-items:center;justify-content:center;font-weight:500;}
+.day.has-entry{cursor:pointer;}
+.day.has-entry .day-num{background:var(--text);color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:500;}
+.day.has-entry:hover{background:var(--bg3);}
+.day.selected .day-num{outline:2px solid var(--text);outline-offset:2px;}
+.entry-dots{display:flex;gap:3px;align-items:center;}
+.edot{width:4px;height:4px;border-radius:50%;}
+.edot.photo{background:var(--text3);}
+.edot.voice{background:var(--green);}
+.edot.plain{background:var(--border2);}
+
+/* PANEL */
+.panel-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;backdrop-filter:blur(2px);}
+.panel-backdrop.open{display:block;}
+.entry-panel{position:fixed;right:0;top:0;bottom:0;width:min(460px,100vw);background:var(--bg);border-left:1px solid var(--border);box-shadow:-8px 0 40px rgba(0,0,0,.1);z-index:201;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);}
+.entry-panel.open{transform:translateX(0);}
+.panel-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.panel-date{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;}
+.panel-close{background:var(--bg3);border:none;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.panel-close:hover{background:var(--border);}
+.panel-body{flex:1;overflow-y:auto;padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px;}
+
+.scan-wrap{background:var(--bg3);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;min-height:140px;}
+.scan-img{width:100%;display:block;}
+.scan-empty{opacity:.2;padding:32px;text-align:center;font-size:13px;color:var(--text3);}
+
+.audio-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 15px;display:flex;flex-direction:column;gap:8px;}
+.audio-lbl{font-size:11px;font-weight:500;color:var(--green);display:flex;align-items:center;gap:5px;}
+audio{width:100%;height:32px;accent-color:var(--text);}
+.no-audio{font-size:12px;color:var(--text3);font-style:italic;text-align:center;padding:4px;}
+
+.section-lbl{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:.6px;text-transform:uppercase;margin-bottom:4px;}
+.extra-note{font-size:13px;line-height:1.8;color:var(--text2);}
+
+.btn-del{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 14px;font-size:12px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;align-self:flex-start;}
+.btn-del:hover{border-color:var(--red);color:var(--red);}
+
+/* ADD MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end;justify-content:center;padding:0;}
+.overlay.open{display:flex;}
+.amodal{background:var(--bg);border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;animation:slideUp .25s cubic-bezier(.4,0,.2,1);}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.a-head{padding:20px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg);z-index:2;border-radius:20px 20px 0 0;}
+.a-title{font-family:'Playfair Display',serif;font-size:20px;}
+.a-close{background:var(--bg3);border:none;border-radius:50%;width:28px;height:28px;font-size:15px;cursor:pointer;color:var(--text2);display:flex;align-items:center;justify-content:center;}
+.a-body{padding:18px 22px 40px;display:flex;flex-direction:column;gap:14px;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.flbl{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;}
+.finp,.ftxt{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:15px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;transition:border-color .15s;width:100%;}
+.finp:focus,.ftxt:focus{border-color:var(--border2);background:var(--bg);}
+.ftxt{resize:none;height:80px;line-height:1.65;}
+
+.upzone{border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;cursor:pointer;background:var(--bg2);position:relative;transition:all .15s;}
+.upzone:hover{border-color:var(--border2);}
+.upzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.up-ico{font-size:22px;margin-bottom:4px;}
+.up-txt{font-size:12px;color:var(--text3);}
+.up-pre{font-size:12px;color:var(--green);font-weight:500;margin-top:4px;}
+#scan-thumb{width:100%;max-height:120px;object-fit:contain;margin-top:8px;border-radius:6px;display:none;}
+
+.btn-save{background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);padding:14px;width:100%;font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s;margin-top:4px;}
+.btn-save:hover{background:#333;}
+.btn-save:disabled{background:var(--border2);cursor:not-allowed;}
+.save-spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto;}
+
+/* desktop modal */
+@media(min-width:600px){
+  .overlay{align-items:center;padding:20px;}
+  .amodal{border-radius:16px;max-height:88vh;}
+  .a-head{border-radius:16px 16px 0 0;}
+  .entry-panel{top:0;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-inner">
+    <div class="logo">Jian's Diary <em>archive</em></div>
+    <button class="btn-new" onclick="openAdd()">
+      <svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      일기 추가
+    </button>
+  </div>
+</header>
+
+<div class="cal-wrap">
+  <div class="month-nav">
+    <button class="nav-btn" onclick="prevMonth()">&#8592;</button>
+    <div class="month-title">
+      <span id="month-name"></span>
+      <span class="yr" id="year-name"></span>
+    </div>
+    <button class="nav-btn" onclick="nextMonth()">&#8594;</button>
+  </div>
+  <div class="dow-row">
+    <div class="dow">일</div><div class="dow">월</div><div class="dow">화</div>
+    <div class="dow">수</div><div class="dow">목</div><div class="dow">금</div><div class="dow">토</div>
+  </div>
+  <div id="cal-grid" class="cal-grid"></div>
+</div>
+
+<!-- ENTRY PANEL -->
+<div class="panel-backdrop" id="panel-bd" onclick="closePanel()"></div>
+<div class="entry-panel" id="entry-panel">
+  <div class="panel-head">
+    <div class="panel-date" id="panel-date-label"></div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="overlay" id="aov" onclick="aovClose(event)">
+  <div class="amodal">
+    <div class="a-head">
+      <div class="a-title">새 일기 추가</div>
+      <button class="a-close" onclick="document.getElementById('aov').classList.remove('open')">✕</button>
+    </div>
+    <div class="a-body">
+      <div class="fg">
+        <div class="flbl">날짜</div>
+        <input class="finp" type="date" id="i-date">
+      </div>
+      <div class="fg">
+        <div class="flbl">추가 기록 <span style="font-weight:400;font-size:10px;text-transform:none;color:#bbb">(선택)</span></div>
+        <textarea class="ftxt" id="i-extra" placeholder="기억해두고 싶은 순간을 자유롭게…"></textarea>
+      </div>
+      <div class="fg">
+        <div class="flbl">📷 일기장 사진</div>
+        <div class="upzone">
+          <input type="file" accept="image/*" id="i-scan" onchange="prevScan(this)">
+          <div class="up-ico">📷</div>
+          <div class="up-txt">사진을 올려주세요</div>
+          <div class="up-pre" id="scan-pre"></div>
+          <img id="scan-thumb" alt="">
+        </div>
+      </div>
+      <div class="fg">
+        <div class="flbl">🎙️ 아이 목소리</div>
+        <div class="upzone">
+          <input type="file" accept="audio/*" id="i-audio" onchange="prevAudio(this)">
+          <div class="up-ico">🎙️</div>
+          <div class="up-txt">음성 파일 (m4a, mp3 등)</div>
+          <div class="up-pre" id="audio-pre"></div>
+        </div>
+      </div>
+      <button class="btn-save" id="btn-save" onclick="doSave()">
+        <span id="save-label">저장하기</span>
+        <div class="save-spinner" id="save-spinner"></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── SUPABASE CONFIG ────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://wumvxdrsmygqumbckdf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1bXZ2eGRyc215Z3F1bWJja2RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDkyMzEsImV4cCI6MjA5MDEyNTIzMX0.zR0DgVNJylzmTMRfDXD6lseFSaIqsI5T7OtWtJN-fco';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── STATE ──────────────────────────────────────────────────────────────
+const MONTHS_KO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+let viewYear, viewMonth, selectedDate = null;
+let entries = {}; // { 'YYYY-MM-DD': entryObj }
+let scanFile = null, audioFile = null;
+
+// ── INIT ───────────────────────────────────────────────────────────────
+(async function init() {
+  const n = new Date();
+  viewYear = n.getFullYear();
+  viewMonth = n.getMonth();
+  document.getElementById('i-date').value = fmtISO(n);
+  await loadEntries();
+  renderCal();
+})();
+
+// ── LOAD FROM SUPABASE ─────────────────────────────────────────────────
+async function loadEntries() {
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = `<div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>`;
+  const { data, error } = await sb.from('entries').select('*');
+  if (error) { console.error(error); return; }
+  entries = {};
+  (data || []).forEach(e => { entries[e.date] = e; });
+}
+
+// ── CALENDAR RENDER ────────────────────────────────────────────────────
+function renderCal() {
+  document.getElementById('month-name').textContent = MONTHS_KO[viewMonth];
+  document.getElementById('year-name').textContent = viewYear + '년';
+
+  const todayStr = fmtISO(new Date());
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+  const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+
+  let html = '';
+  for (let i = 0; i < totalCells; i++) {
+    let dayNum, dateStr, otherMonth = false;
+    if (i < firstDay) {
+      dayNum = daysInPrev - firstDay + 1 + i;
+      dateStr = fmtISO(new Date(viewYear, viewMonth - 1, dayNum));
+      otherMonth = true;
+    } else if (i >= firstDay + daysInMonth) {
+      dayNum = i - firstDay - daysInMonth + 1;
+      dateStr = fmtISO(new Date(viewYear, viewMonth + 1, dayNum));
+      otherMonth = true;
+    } else {
+      dayNum = i - firstDay + 1;
+      dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+    }
+
+    const entry = entries[dateStr];
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === selectedDate;
+
+    let cls = 'day';
+    if (otherMonth) cls += ' other-month';
+    if (isToday && !entry) cls += ' today';
+    if (entry) cls += ' has-entry';
+    if (isSelected) cls += ' selected';
+
+    let dots = '';
+    if (entry) {
+      dots = '<div class="entry-dots">';
+      if (entry.photo_url) dots += '<div class="edot photo"></div>';
+      if (entry.audio_url) dots += '<div class="edot voice"></div>';
+      if (!entry.photo_url && !entry.audio_url) dots += '<div class="edot plain"></div>';
+      dots += '</div>';
+    }
+
+    const click = entry ? `onclick="openPanel('${dateStr}')"` : '';
+    html += `<div class="${cls}" ${click}><div class="day-num">${dayNum}</div>${dots}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+function prevMonth() { if (--viewMonth < 0) { viewMonth = 11; viewYear--; } renderCal(); }
+function nextMonth() { if (++viewMonth > 11) { viewMonth = 0; viewYear++; } renderCal(); }
+
+function fmtISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDisplay(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${y}년 ${parseInt(m)}월 ${parseInt(d)}일`;
+}
+
+// ── PANEL ──────────────────────────────────────────────────────────────
+function openPanel(dateStr) {
+  const e = entries[dateStr];
+  if (!e) return;
+  selectedDate = dateStr;
+  renderCal();
+
+  document.getElementById('panel-date-label').textContent = fmtDisplay(dateStr);
+
+  const scanHtml = e.photo_url
+    ? `<div class="scan-wrap"><img class="scan-img" src="${e.photo_url}" alt="일기 스캔"></div>`
+    : `<div class="scan-wrap"><div class="scan-empty">📄 사진 없음</div></div>`;
+
+  const audioHtml = e.audio_url
+    ? `<div class="audio-wrap">
+        <div class="audio-lbl">🎙️ 아이 목소리</div>
+        <audio controls src="${e.audio_url}"></audio>
+       </div>`
+    : `<div class="audio-wrap"><div class="no-audio">🎙️ 음성 파일 없음</div></div>`;
+
+  const extraHtml = e.extra
+    ? `<div><div class="section-lbl">추가 기록</div><div class="extra-note">${e.extra.replace(/\n/g,'<br>')}</div></div>`
+    : '';
+
+  document.getElementById('panel-body').innerHTML =
+    scanHtml + audioHtml + extraHtml +
+    `<button class="btn-del" onclick="doDelete(${e.id}, '${e.photo_url||''}', '${e.audio_url||''}')">이 일기 삭제</button>`;
+
+  document.getElementById('entry-panel').classList.add('open');
+  document.getElementById('panel-bd').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('entry-panel').classList.remove('open');
+  document.getElementById('panel-bd').classList.remove('open');
+  const a = document.querySelector('.entry-panel audio');
+  if (a) { a.pause(); a.currentTime = 0; }
+}
+
+// ── DELETE ─────────────────────────────────────────────────────────────
+async function doDelete(id, photoUrl, audioUrl) {
+  if (!confirm('이 일기를 삭제할까요?')) return;
+
+  // delete files from storage
+  const toDelete = [];
+  if (photoUrl) toDelete.push(photoUrl.split('/diary-files/')[1]);
+  if (audioUrl) toDelete.push(audioUrl.split('/diary-files/')[1]);
+  if (toDelete.length) await sb.storage.from('diary-files').remove(toDelete);
+
+  await sb.from('entries').delete().eq('id', id);
+  closePanel();
+  selectedDate = null;
+  await loadEntries();
+  renderCal();
+}
+
+// ── ADD MODAL ──────────────────────────────────────────────────────────
+function openAdd() {
+  document.getElementById('i-date').value = fmtISO(new Date());
+  document.getElementById('i-extra').value = '';
+  document.getElementById('scan-pre').textContent = '';
+  document.getElementById('audio-pre').textContent = '';
+  const th = document.getElementById('scan-thumb');
+  th.src = ''; th.style.display = 'none';
+  scanFile = null; audioFile = null;
+  document.getElementById('aov').classList.add('open');
+}
+function aovClose(ev) {
+  if (ev.target === document.getElementById('aov'))
+    document.getElementById('aov').classList.remove('open');
+}
+function prevScan(inp) {
+  if (!inp.files[0]) return;
+  scanFile = inp.files[0];
+  document.getElementById('scan-pre').textContent = '✓ ' + scanFile.name;
+  const th = document.getElementById('scan-thumb');
+  th.src = URL.createObjectURL(scanFile); th.style.display = 'block';
+}
+function prevAudio(inp) {
+  if (!inp.files[0]) return;
+  audioFile = inp.files[0];
+  document.getElementById('audio-pre').textContent = '✓ ' + audioFile.name;
+}
+
+async function doSave() {
+  const date = document.getElementById('i-date').value;
+  if (!date) { alert('날짜를 선택해주세요!'); return; }
+
+  // set loading state
+  const btn = document.getElementById('btn-save');
+  document.getElementById('save-label').style.display = 'none';
+  document.getElementById('save-spinner').style.display = 'block';
+  btn.disabled = true;
+
+  try {
+    let photo_url = null, audio_url = null;
+
+    // upload photo
+    if (scanFile) {
+      const ext = scanFile.name.split('.').pop();
+      const path = `photos/${date}-${Date.now()}.${ext}`;
+      const { error } = await sb.storage.from('diary-files').upload(path, scanFile);
+      if (!error) {
+        const { data } = sb.storage.from('diary-files').getPublicUrl(path);
+        photo_url = data.publicUrl;
+      }
+    }
+
+    // upload audio
+    if (audioFile) {
+      const ext = audioFile.name.split('.').pop();
+      const path = `audio/${date}-${Date.now()}.${ext}`;
+      const { error } = await sb.storage.from('diary-files').upload(path, audioFile);
+      if (!error) {
+        const { data } = sb.storage.from('diary-files').getPublicUrl(path);
+        audio_url = data.publicUrl;
+      }
+    }
+
+    // delete existing entry for this date if any
+    if (entries[date]) {
+      await sb.from('entries').delete().eq('date', date);
+    }
+
+    // insert
+    const { error } = await sb.from('entries').insert({
+      date,
+      extra: document.getElementById('i-extra').value.trim() || null,
+      photo_url,
+      audio_url
+    });
+
+    if (error) throw error;
+
+    document.getElementById('aov').classList.remove('open');
+
+    // jump to that month
+    const [y, m] = date.split('-').map(Number);
+    viewYear = y; viewMonth = m - 1;
+    await loadEntries();
+    renderCal();
+
+  } catch(err) {
+    alert('저장 중 오류가 났어요: ' + err.message);
+  } finally {
+    document.getElementById('save-label').style.display = 'block';
+    document.getElementById('save-spinner').style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+// ── PWA ────────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
